@@ -1,9 +1,0 @@
-server {
-    listen 80;
-
-    server_name 79.137.194.54 exemple.com;
-
-    location / {
-        proxy_pass http://localhost:8000;
-    }
-}
