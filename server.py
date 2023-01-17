@@ -5,13 +5,7 @@ from auth.jwt_bearer import jwtBearer
 from random import choice
 import database
 import uuid
-
-#79.137.194.54
-
-#pip install uvicorn fastapi gunicorn
-#pm2 start "gunicorn -w 5 -k uvicorn.workers.UvicornWorker server:app" --name "fastapi"
-
-#uvicorn server:app --reload --port 8000
+import re
 
 # Структура данных:
 # {
@@ -20,6 +14,8 @@ import uuid
 # }
 
 users = []
+
+#regular expression for russian auto plates
 
 
 alphabet = ['А', 'В', 'Е', 'К', 'М', 'Н', 'О', 'Р', 'С', 'Т', 'У', 'Х']
@@ -109,15 +105,21 @@ def generate_plate(amount: int):
     
 @app.post("/plate/add", dependencies=[Depends(jwtBearer())], tags = ["plates"])
 def add_plate(plate: Plate = Body(default=None)):
-    all_plate = []
-    plate_data = database.get_all_records()
-    for one_plate in plate_data:
-        all_plate.append(one_plate['plate'])
-    if plate.plate not in all_plate:
-        database.insert_record({"uid": str(uuid.uuid4()),"plate": plate.plate})
-        return {"Added": plate.plate}
+    if re.match("[АВЕКМНОРСТУХ]{1}[0-9]{3}[АВЕКМНОРСТУХ]{2}", plate.plate):
+        all_plate = []
+        plate_data = database.get_all_records()
+        for one_plate in plate_data:
+            all_plate.append(one_plate['plate'])
+        if plate.plate not in all_plate:
+            database.insert_record({"uid": str(uuid.uuid4()),"plate": plate.plate})
+            return {"Added": plate.plate}
+        else:
+            return {"This plate already exists"}
     else:
-        return {"This plate already exists"}
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid plate"
+        )
         
 @app.post("/user/signup", tags = ["users"])
 def user_signup(user: UserSchema = Body(default=None)):
